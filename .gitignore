@@ -1,0 +1,23 @@
+# Flutter
+build/
+.flutter-plugins
+.packages
+pubspec.lock
+*.iml
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+.envrc
+
+# PlatformIO (ESP32)
+.pio/
+.vscode/
+
+# General
+.DS_Store
+*.log
+*.swp
