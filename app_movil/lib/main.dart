@@ -4,6 +4,16 @@ import 'package:geolocator/geolocator.dart';
 
 void main() => runApp(const MyApp());
 
+//Coornedanas de la Universidad
+
+// Lista de los 4 puntos de la universidad
+final List<Map<String, double>> puntosUniversidad = [
+  {"lat": -2.886605, "lon": -78.991467}, // Punto 1
+  {"lat": -2.887719, "lon": -78.990259}, // Punto 2
+  {"lat": -2.885555, "lon": -78.987531}, // Punto 3
+  {"lat": -2.884516, "lon": -78.989742}, // Punto 4
+];
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -29,6 +39,7 @@ class _BiometricPageState extends State<BiometricPage> {
   final LocalAuthentication auth = LocalAuthentication();
   String _message = 'Esperando autenticación...';
   String _locationMessage = "Ubicación no obtenida";
+  String _validateDistance = "Esta fuera del rango de la u";
 
   Future<void> _authenticate() async {
     try {
@@ -52,7 +63,9 @@ class _BiometricPageState extends State<BiometricPage> {
 
       List<BiometricType> availableBiometrics =
           await auth.getAvailableBiometrics();
-      debugPrint('Biometrías disponibles: $availableBiometrics');// Útil en debug
+      debugPrint(
+        'Biometrías disponibles: $availableBiometrics',
+      ); // Útil en debug
 
       bool authenticated = await auth.authenticate(
         localizedReason: 'Autentícate para ingresar a la universidad',
@@ -63,9 +76,10 @@ class _BiometricPageState extends State<BiometricPage> {
       );
 
       setState(() {
-        _message = authenticated
-            ? '✅ Autenticado correctamente'
-            : '❌ Autenticación fallida o cancelada';
+        _message =
+            authenticated
+                ? '✅ Autenticado correctamente'
+                : '❌ Autenticación fallida o cancelada';
       });
     } catch (e) {
       setState(() {
@@ -111,7 +125,42 @@ class _BiometricPageState extends State<BiometricPage> {
     );
 
     setState(() {
-      _locationMessage = "Latitud: ${position.latitude}, Longitud: ${position.longitude}";
+      _locationMessage =
+          "Latitud: ${position.latitude}, Longitud: ${position.longitude}";
+    });
+
+    double distanciaMinima = double.infinity;
+    Map<String, double> puntoMasCercano = {};
+
+    //Calcular cual es la distancia mas cercana
+    for (var punto in puntosUniversidad) {
+      double distancia = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        punto["lat"]!,
+        punto["lon"]!,
+      );
+
+      if (distancia < distanciaMinima) {
+        distanciaMinima = distancia;
+        puntoMasCercano = punto;
+      }
+    }
+
+    //Validar si esta o no dentro del rango de la u
+    setState(() {
+      if (distanciaMinima <= 100) {
+        _locationMessage =
+            "✅ Estás dentro del rango.\n"
+            "Punto más cercano a ${distanciaMinima.toStringAsFixed(2)} metros.\n"
+            "Lat: ${puntoMasCercano['lat']}, Lon: ${puntoMasCercano['lon']}";
+      } else {
+        _locationMessage =
+            "Tu ubicacion:\n Lat: ${position.latitude}, Lon: ${position.longitude}.\n"
+            "❌ Estás fuera del rango permitido.\n"
+            "Punto más cercano a ${distanciaMinima.toStringAsFixed(2)} metros.\n"
+            "Lat: ${puntoMasCercano['lat']}, Lon: ${puntoMasCercano['lon']}";
+      }
     });
   }
 
@@ -119,19 +168,20 @@ class _BiometricPageState extends State<BiometricPage> {
   void _mostrarAvisoYAutenticar() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Bienvenido'),
-        content: const Text('Vas a autenticarte para ingresar a la UPS.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _authenticate(); //Se pide la autenticacion
-            },
-            child: const Text('Continuar'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Bienvenido'),
+            content: const Text('Vas a autenticarte para ingresar a la UPS.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _authenticate(); //Se pide la autenticacion
+                },
+                child: const Text('Continuar'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -155,6 +205,8 @@ class _BiometricPageState extends State<BiometricPage> {
             Text(_message, style: const TextStyle(fontSize: 20)),
             const SizedBox(height: 20),
             Text(_locationMessage, style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 20),
+            Text(_validateDistance, style: const TextStyle(fontSize: 16)),
           ],
         ),
       ),
