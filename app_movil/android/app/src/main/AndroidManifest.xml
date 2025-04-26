@@ -43,6 +43,14 @@
             <data android:mimeType="text/plain"/>
         </intent>
     </queries>
+
+    <!--Permisos para la autenticacion briometica/patron-->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
+
+    <!--Permisos para la geolocalizacion-->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+
 </manifest>
