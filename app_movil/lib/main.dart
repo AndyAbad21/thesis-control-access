@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:otp/otp.dart';
+import 'dart:async';
 
 void main() => runApp(const MyApp());
 
@@ -13,6 +15,10 @@ final List<Map<String, double>> puntosUniversidad = [
   {"lat": -2.885555, "lon": -78.987531}, // Punto 3
   {"lat": -2.884516, "lon": -78.989742}, // Punto 4
 ];
+
+// ignore: unused_element
+String? _currentOtp;
+Timer? _otpTimer;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -75,12 +81,17 @@ class _BiometricPageState extends State<BiometricPage> {
         ),
       );
 
-      setState(() {
-        _message =
-            authenticated
-                ? '✅ Autenticado correctamente'
-                : '❌ Autenticación fallida o cancelada';
-      });
+      // Validar si el usuario se autentico para generar la llave OTP
+      if (authenticated) {
+        setState(() {
+          _message = '✅ Autenticado correctamente';
+        });
+        _generateAndShowOTP(); //Mostar la llave
+      } else {
+        setState(() {
+          _message = '❌ Autenticación fallida o cancelada';
+        });
+      }
     } catch (e) {
       setState(() {
         _message = '⚠️ Error de autenticación: $e';
@@ -121,7 +132,8 @@ class _BiometricPageState extends State<BiometricPage> {
     }
 
     Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      desiredAccuracy:
+          LocationAccuracy.high, //high tiene un rango de error de hasta 20 mtrs
     );
 
     setState(() {
@@ -148,6 +160,24 @@ class _BiometricPageState extends State<BiometricPage> {
     }
 
     //Validar si esta o no dentro del rango de la u
+    if (distanciaMinima <= 100) {
+      _locationMessage =
+          "✅ Estás dentro del rango.\n"
+          "Punto más cercano a ${distanciaMinima.toStringAsFixed(2)} metros.\n"
+          "Lat: ${puntoMasCercano['lat']}, Lon: ${puntoMasCercano['lon']}";
+
+      //Automáticamente pedir autenticación
+      // WidgetsBinding.instance.addPostFrameCallback((_) {
+      //   _mostrarAvisoYAutenticar();
+      // });
+    } else {
+      //Si el usuario esta fuera del rango permitido no se le permite autenticarse
+      setState(() {
+        _locationMessage =
+            "❌ Estás fuera del rango permitido.\n"
+            "Punto más cercano: ${distanciaMinima.toStringAsFixed(2)} metros.";
+      });
+    }
     setState(() {
       if (distanciaMinima <= 100) {
         _locationMessage =
@@ -183,6 +213,60 @@ class _BiometricPageState extends State<BiometricPage> {
             ],
           ),
     );
+  }
+
+  void _generateAndShowOTP() {
+    // Cancelar un timer anterior si existe
+    _otpTimer?.cancel();
+
+    // Clave secreta(base32)
+    const String secret = 'JBSWY3DPEHPK3PXP';
+
+    // Duración de la OTP en segundos
+    const int interval = 300;
+
+    // Generar el código TOTP
+    String totp = OTP.generateTOTPCodeString(
+      secret,
+      DateTime.now().millisecondsSinceEpoch,
+      interval: interval,
+      length: 6, // 6 dígitos
+      algorithm: Algorithm.SHA1, // SHA1 es estándar para TOTP
+      isGoogle: true,
+    );
+    setState(() {
+      _currentOtp = totp;
+    });
+
+    // Programar la expiración automática en segundos
+    const int segundosDeVida = 5; // 5 minutos = 300 segundos
+
+    debugPrint('✅ La OTP se genero correctamente con un tiempo valido deL: $segundosDeVida segundos.');
+    // Mostrar el OTP en un cuadro de diálogo
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Llave Temporal Generada'),
+            content: Text('Tu OTP es: $totp\n\n¡Expira en 5 minutos!'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+    );
+
+    // Programar la expiración automática
+    _otpTimer = Timer(const Duration(seconds: segundosDeVida), () {
+      setState(() {
+        _currentOtp = null;
+      });
+      debugPrint(
+        '⚠️ La OTP ha expirado automáticamente después de $segundosDeVida segundos.',
+      );
+    });
   }
 
   @override

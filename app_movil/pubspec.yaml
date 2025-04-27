@@ -30,8 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  local_auth: ^2.3.0
-  geolocator: ^14.0.0
+  local_auth: ^2.3.0 # Libreria para la validacion bimetrica
+  geolocator: ^14.0.0 # Libreria para la localizacion
+  otp: ^3.0.1 # Libreria para la generacion de llaves
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
