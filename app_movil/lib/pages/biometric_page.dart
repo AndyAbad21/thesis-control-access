@@ -19,6 +19,7 @@ class _BiometricPageState extends State<BiometricPage> {
 
   String _locationMessage = "Ubicación no obtenida";
   String _authenticationMessage = "Esperando autenticación...";
+  bool _isLoading = true; // Controla la animacion de carga
 
   @override
   void initState() {
@@ -28,11 +29,17 @@ class _BiometricPageState extends State<BiometricPage> {
 
   // Método que une ubicación + autenticación + generación OTP
   Future<void> _initControlDeAcceso() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     // 1. Obtener ubicación
     Position? position = await LocationService.getCurrentLocation();
     if (position == null) {
       setState(() {
-        _locationMessage = "❌ No se pudo obtener ubicación o permisos denegados.";
+        _locationMessage =
+            "❌ No se pudo obtener ubicación o permisos denegados.";
+        _isLoading = false;
       });
       return;
     }
@@ -44,7 +51,8 @@ class _BiometricPageState extends State<BiometricPage> {
 
     if (distanciaMinima <= _maxAllowedDistanceMeters) {
       setState(() {
-        _locationMessage = "✅ Dentro del rango permitido.\n"
+        _locationMessage =
+            "✅ Dentro del rango permitido.\n"
             "Punto más cercano: ${distanciaMinima.toStringAsFixed(2)} metros.\n"
             "Lat: ${puntoMasCercano['lat']}, Lon: ${puntoMasCercano['lon']}";
       });
@@ -66,10 +74,14 @@ class _BiometricPageState extends State<BiometricPage> {
       }
     } else {
       setState(() {
-        _locationMessage = "❌ Estás fuera del rango permitido.\n"
+        _locationMessage =
+            "❌ Estás fuera del rango permitido.\n"
             "Punto más cercano: ${distanciaMinima.toStringAsFixed(2)} metros.";
       });
     }
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
@@ -77,14 +89,34 @@ class _BiometricPageState extends State<BiometricPage> {
     return Scaffold(
       appBar: AppBar(title: const Text('Control de Acceso UPS')),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(_locationMessage, style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 20),
-            Text(_authenticationMessage, style: const TextStyle(fontSize: 18)),
-          ],
-        ),
+        child:
+            _isLoading
+                ? Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    CircularProgressIndicator(), //Loading Spinner
+                    SizedBox(height: 20), // Espacio
+                    Text(
+                      "Obteniendo ubicación y autenticando...",
+                      style: TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                )
+                : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _locationMessage,
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _authenticationMessage,
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                  ],
+                ),
       ),
     );
   }
