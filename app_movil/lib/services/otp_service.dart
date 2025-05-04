@@ -1,128 +1,65 @@
+
+import 'package:app_movil/services/access_controller_service.dart';
 import 'package:otp/otp.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'secure_storage_service.dart';
 
 class OtpService {
-  // --- VARIABLES SEGURAS ---
-  static const int _time = 10; // 5 minutos = 300 segundos
   static String? _currentOtp;
   static Timer? _otpTimer;
-  static Timer? _countdownTimer; // 🔥 Timer para actualizar el contador
-  static int _timeLeft = _time;  // 🔥 Segundos restantes
-  static final ValueNotifier<int> timeNotifier = ValueNotifier<int>(_time); // 🔥 Notificador para actualizar UI
+  static Timer? _countdownTimer;
+  static int _timeLeft = 0;
+  static final ValueNotifier<int> timeNotifier = ValueNotifier<int>(0);
 
-  // Método para generar y mostrar OTP
-  static Future<void> generateAndShowOTP(BuildContext context) async {
+  // Método para generar OTP y tomar el tiempo de expiración del backend
+  static Future<bool> generateOTP(int expirationTime) async {
     // Cancelar timers anteriores si existen
     _otpTimer?.cancel();
     _countdownTimer?.cancel();
 
     // Resetear tiempo
-    _timeLeft = _time;
+    _timeLeft = expirationTime;
     timeNotifier.value = _timeLeft;
 
-    await SecureStorageService.guardarSecretoOTP('JBSWY3DPEHPK3PXP'); //Guardar el secret en el secure storage
+    // Guardar el secreto en almacenamiento seguro
+    await SecureStorageService.guardarSecretoOTP('JBSWY3DPEHPK3PXP');
 
-    // Obtener el secreto dinámicamente desde almacenamiento seguro
-    String? secret = await SecureStorageService.obtenerSecretoOTP(); // Obtener el secret del secure storage
+    // Obtener el secreto desde el almacenamiento seguro
+    String? secret = await SecureStorageService.obtenerSecretoOTP();
 
     if (secret == null || secret.isEmpty) {
       debugPrint('❌ Error: No se encontró o está vacío el secreto para generar OTP.');
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Error de Seguridad'),
-          content: const Text(
-              'No se encontró tu clave secreta para generar la llave de acceso. '
-              'Por favor reinstala la app o contacta a soporte técnico.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      return;
+      return false; // Si no se encuentra el secreto, retorna false
     }
 
     // Generar el código TOTP usando el secreto
     String totp = OTP.generateTOTPCodeString(
       secret,
       DateTime.now().millisecondsSinceEpoch,
-      interval: _time,
-      length: 6,
+      interval: expirationTime,
+      length: 12,
       algorithm: Algorithm.SHA1,
       isGoogle: true,
     );
 
+    if (totp.isEmpty) {
+      debugPrint('❌ Error: No se pudo generar la OTP.');
+      return false; // Si no se pudo generar la OTP, retorna false
+    }
+
     _currentOtp = totp;
 
-    debugPrint('✅ La OTP se generó correctamente con un tiempo válido de $_time segundos.');
-
-    // Mostrar la OTP en un cuadro de diálogo
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Llave Temporal Generada'),
-        content: ValueListenableBuilder<int>(
-  valueListenable: timeNotifier,
-  builder: (context, tiempoRestante, _) {
-    final minutos = (tiempoRestante ~/ 60).toString().padLeft(2, '0');
-    final segundos = (tiempoRestante % 60).toString().padLeft(2, '0');
-    
-    double progreso = tiempoRestante / OtpService._time; // 🔥 Cálculo de progreso
-    
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: 100,
-              height: 100,
-              child: CircularProgressIndicator(
-                value: progreso, // 🔥 Progreso entre 0.0 - 1.0
-                strokeWidth: 8,
-                backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-              ),
-            ),
-            Text(
-              "$minutos:$segundos",
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Tu OTP es: $totp',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16),
-        ),
-      ],
-    );
-  },
-),
-
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+    debugPrint('✅ La OTP se generó correctamente con un tiempo válido de $expirationTime segundos. Llave: $_currentOtp');
 
     // --- Timers para expirar y actualizar contador ---
-
     // Timer para cuando expire completamente
-    _otpTimer = Timer(Duration(seconds: _time), () {
+    _otpTimer = Timer(Duration(seconds: expirationTime), () {
       _currentOtp = null;
       _countdownTimer?.cancel();
-      debugPrint('⚠️ La OTP ha expirado automáticamente después de $_time segundos.');
+      debugPrint('⚠️ La OTP ha expirado automáticamente después de $expirationTime segundos.');
+      // Notificar al AccessControllerService que la OTP ha expirado
+      AccessControllerService.notifyKeyExpired();
     });
 
     // Timer para ir actualizando cada segundo
@@ -132,5 +69,7 @@ class OtpService {
         timeNotifier.value = _timeLeft;
       }
     });
+
+    return true;
   }
 }

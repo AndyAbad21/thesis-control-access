@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async'; // Para controlar el timer
 import 'config_screen.dart';
+import '../services/access_controller_service.dart'; // Importa el orquestador
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -13,9 +14,12 @@ class _HomeScreenState extends State<HomeScreen> {
   double progress = 1.0;
   Timer? countdownTimer;
   bool isCounting = false;
-  static const int totalSeconds = 5; // Cambia a 300 para 5 minutos reales
+  static int totalSeconds =
+      AccessControllerService.time; // Cambia a 300 para 5 minutos reales
   int secondsLeft = totalSeconds;
   bool _isConfigOpen = false;
+  bool isValidating = false;
+  Color circleColor = const Color(0xFFFEC455); // Color por defecto del círculo
 
   void startCountdown() {
     countdownTimer?.cancel();
@@ -23,6 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
       progress = 1.0;
       secondsLeft = totalSeconds;
       isCounting = true;
+      circleColor = const Color(0xFFFEC455);
     });
 
     countdownTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
@@ -48,13 +53,29 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Text(
                 'Key expired!',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
               ),
             ),
-            backgroundColor: Color(0xFF013B72),
-            // behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 1),
           ),
         );
+
+        // Cambiar el color a rojo cuando expire
+        setState(() {
+          circleColor = Colors.red; // Color rojo
+        });
+
+        // Restaurar el color original después de que el SnackBar desaparezca
+        Future.delayed(const Duration(milliseconds: 1500), () {
+          setState(() {
+            circleColor = const Color(0xFFFEC455); // Color original
+          });
+        });
       }
     });
   }
@@ -79,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 🔷 Rombito azul
           Positioned(
             top: -100,
             left: -250,
@@ -92,8 +112,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-
-          // 🔷 Icono menú
           Positioned(
             top: 30,
             left: 10,
@@ -101,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: const Icon(Icons.menu, color: Colors.white, size: 40),
               onPressed: () {
                 setState(() {
-                  _isConfigOpen = true; // 🔥 Oculta el logo
+                  _isConfigOpen = true;
                 });
 
                 showGeneralDialog(
@@ -134,7 +152,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     );
                   },
                 ).then((_) {
-                  // 🔥 Cuando cierran el panel, vuelve a mostrar el logo
                   setState(() {
                     _isConfigOpen = false;
                   });
@@ -142,8 +159,6 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
           ),
-
-          // 🔷 Nombre del usuario
           Positioned(
             top: 125,
             left: 35,
@@ -165,24 +180,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-
-          // 🔷 Logo semi-transparente
           Positioned(
             top: 200,
             right: -60,
             child: AnimatedOpacity(
-              opacity:
-                  _isConfigOpen
-                      ? 0.0
-                      : 0.2, // 🔥 Si configuración abierta, se desvanece
-              duration: const Duration(
-                milliseconds: 500,
-              ), // Tiempo de desvanecimiento
+              opacity: _isConfigOpen ? 0.0 : 0.2,
+              duration: const Duration(milliseconds: 500),
               child: Image.asset('assets/logo_ups_unico.png', width: 250),
             ),
           ),
-
-          // 🔷 Texto dinámico: "Generate Key" o "Expire in" + contador
           Align(
             alignment: const Alignment(0, 0.12),
             child: Column(
@@ -208,19 +214,57 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+                if (isValidating)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 0),
+                    child: Text(
+                      'Validando...',
+                      style: TextStyle(
+                        color: Color(0xFF013B72),
+                        fontSize: 25,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-
-          // 🔷 Botón circular animado
           Align(
             alignment: const Alignment(0, 0.66),
             child: GestureDetector(
-              onTap: () {
-                startCountdown();
+              onTap: () async {
+                setState(() {
+                  isValidating = true; // Mostrar mensaje "Validando..."
+                  circleColor = Colors.green;
+                });
+                // Llamamos a la función para verificar el acceso y generar la OTP
+                final result =
+                    await AccessControllerService.verificarAccesoYGenerarOTP();
+
+                if (result["success"]) {
+                  // Si fue exitoso, iniciar el temporizador
+                  startCountdown();
+                } else {
+                  // Si hubo un error, mostrar el mensaje de error
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        result["message"],
+                        textAlign: TextAlign.center,
+                      ),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                }
+                setState(() {
+                  isValidating =
+                      false; // Ocultar mensaje "Validando..." cuando termine
+                  circleColor = const Color(0xFFFEC455);
+                });
               },
               child: CustomPaint(
-                painter: KeyButtonPainter(progress, isCounting),
+                painter: KeyButtonPainter(progress, isCounting, circleColor),
                 child: Container(
                   width: 175,
                   height: 175,
@@ -236,18 +280,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// 🎨 Pintor del botón
 class KeyButtonPainter extends CustomPainter {
   final double progress;
   final bool isCounting;
+  final Color circleColor; // Agregamos el color como parámetro
 
-  KeyButtonPainter(this.progress, this.isCounting);
+  KeyButtonPainter(this.progress, this.isCounting, this.circleColor);
 
   @override
   void paint(Canvas canvas, Size size) {
     double radius = size.width / 2;
 
-    // 🔵 Círculo azul exterior (borde)
     Paint outerCircle =
         Paint()
           ..color = const Color(0xFF013B72)
@@ -257,16 +300,15 @@ class KeyButtonPainter extends CustomPainter {
     canvas.drawCircle(Offset(radius, radius), radius - 1, outerCircle);
 
     if (!isCounting) {
-      // Estado inactivo: todo blanco
       Paint fullWhite =
           Paint()
-            ..color = Color(0xFFFEC455)
+            ..color =
+                circleColor // Usamos el color que se pasa como parámetro
             ..style = PaintingStyle.stroke
             ..strokeWidth = 70;
 
       canvas.drawCircle(Offset(radius, radius), radius - 20, fullWhite);
     } else {
-      // 🟡 Estado activo: blanco + amarillo
       Paint passedArc =
           Paint()
             ..color = Colors.white
@@ -283,7 +325,8 @@ class KeyButtonPainter extends CustomPainter {
 
       Paint remainingArc =
           Paint()
-            ..color = const Color(0xFFFEC455)
+            ..color =
+                circleColor // Usamos el color que se pasa como parámetro
             ..style = PaintingStyle.stroke
             ..strokeWidth = 70;
 
@@ -296,7 +339,6 @@ class KeyButtonPainter extends CustomPainter {
       );
     }
 
-    // 🔵 Círculo interno azul relleno
     Paint innerCircle =
         Paint()
           ..color = const Color(0xFF013B72)
@@ -308,6 +350,7 @@ class KeyButtonPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant KeyButtonPainter oldDelegate) {
     return oldDelegate.progress != progress ||
-        oldDelegate.isCounting != isCounting;
+        oldDelegate.isCounting != isCounting ||
+        oldDelegate.circleColor != circleColor;
   }
 }

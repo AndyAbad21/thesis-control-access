@@ -100,15 +100,18 @@ class _ConfigScreenState extends State<ConfigScreen> {
                                 ),
                               ),
                               const SizedBox(width: 20),
-                              Switch(
-                                value: notify,
-                                onChanged: (value) {
-                                  setState(() {
-                                    notify = value;
-                                  });
-                                },
-                                activeColor: Colors.white,
-                                inactiveTrackColor: Colors.white,
+                              Transform.scale(
+                                scale: 1.3,
+                                child: Switch(
+                                  value: notify,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      notify = value;
+                                    });
+                                  },
+                                  activeColor: Colors.white,
+                                  inactiveTrackColor: Colors.white,
+                                ),
                               ),
                               const Spacer(),
                             ],
