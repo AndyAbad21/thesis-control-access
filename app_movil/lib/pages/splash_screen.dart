@@ -13,8 +13,8 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     // Simula tiempo de carga de la app
-    Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pushReplacementNamed(context, '/login');
+    Future.delayed(const Duration(seconds: 0), () {
+      Navigator.pushReplacementNamed(context, '/home');
     });
   }
 

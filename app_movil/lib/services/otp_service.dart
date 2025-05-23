@@ -13,7 +13,7 @@ class OtpService {
   static final ValueNotifier<int> timeNotifier = ValueNotifier<int>(0);
 
   // Método para generar OTP y tomar el tiempo de expiración del backend
-  static Future<bool> generateOTP(int expirationTime) async {
+  static Future<Map<String, dynamic>> generateOTP(int expirationTime) async {
     // Cancelar timers anteriores si existen
     _otpTimer?.cancel();
     _countdownTimer?.cancel();
@@ -30,7 +30,7 @@ class OtpService {
 
     if (secret == null || secret.isEmpty) {
       debugPrint('❌ Error: No se encontró o está vacío el secreto para generar OTP.');
-      return false; // Si no se encuentra el secreto, retorna false
+      return {"success": false, "message": "❌ Error: No se encontró el secreto."}; // Si no se encuentra el secreto, retorna false
     }
 
     // Generar el código TOTP usando el secreto
@@ -45,7 +45,7 @@ class OtpService {
 
     if (totp.isEmpty) {
       debugPrint('❌ Error: No se pudo generar la OTP.');
-      return false; // Si no se pudo generar la OTP, retorna false
+      return {"success": false, "message": "❌ Error al generar la OTP."}; // Si no se pudo generar la OTP, retorna false
     }
 
     _currentOtp = totp;
@@ -70,6 +70,6 @@ class OtpService {
       }
     });
 
-    return true;
+    return {"success": true, "message": "✅ OTP generada correctamente.", "otp": totp};
   }
 }

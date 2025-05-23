@@ -5,7 +5,9 @@ import 'pages/login_screen.dart';
 import 'pages/home_screen.dart';
 import 'pages/config_screen.dart';
 
-void main() => runApp(const MyApp());
+void main() {
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

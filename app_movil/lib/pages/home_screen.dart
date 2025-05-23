@@ -245,17 +245,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Si fue exitoso, iniciar el temporizador
                   startCountdown();
                 } else {
-                  // Si hubo un error, mostrar el mensaje de error
+                  // Si hubo un error, detener el temporizador si está corriendo
+                  countdownTimer?.cancel();
+                  setState(() {
+                    isCounting = false;
+                    secondsLeft = totalSeconds;
+                    circleColor = Colors.red; // Color rojo para denegado
+                  });
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        result["message"],
+                        result["message"] ?? "❌ OTP rechazada",
                         textAlign: TextAlign.center,
                       ),
                       backgroundColor: Colors.red,
-                      duration: Duration(seconds: 1),
+                      duration: const Duration(seconds: 2),
                     ),
                   );
+
+                  // Restaurar color original después de mostrar el mensaje
+                  Future.delayed(const Duration(seconds: 3), () {
+                    setState(() {
+                      circleColor = const Color(
+                        0xFFFEC455,
+                      ); // Color original del botón
+                    });
+                  });
                 }
                 setState(() {
                   isValidating =
