@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'auth_service.dart';
@@ -64,10 +65,16 @@ class AccessControllerService {
     );
 
     final decoded = jsonDecode(response.body);
+    debugPrint("📡 Respuesta recibida del ESP32: ${response.body}");
     bool autorizado = decoded["estado"] == "autorizado";
 
     if (!autorizado) {
       isKeyActive = false; // Marcar la llave como inactiva si fue rechazada
+      // Nueva línea:
+      OtpService.notifyExpiration();
+    } else {
+      // ✅ Para autorizados, también forzamos detención del contador
+      OtpService.notifyExpiration(); // 🔥 Detener timer visual cuando ESP32 responde
     }
 
     return {

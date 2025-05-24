@@ -1,3 +1,4 @@
+import 'package:app_movil/services/otp_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async'; // Para controlar el timer
 import 'config_screen.dart';
@@ -20,6 +21,33 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isConfigOpen = false;
   bool isValidating = false;
   Color circleColor = const Color(0xFFFEC455); // Color por defecto del círculo
+
+  @override
+  void initState() {
+    super.initState();
+
+    OtpService.keyExpiredNotifier.addListener(() {
+      debugPrint("📢 Notificador escuchado en HomeScreen");
+
+      if (OtpService.keyExpiredNotifier.value) {
+        countdownTimer?.cancel();
+        setState(() {
+          isCounting = false;
+          progress = 0.0;
+          secondsLeft = totalSeconds;
+          circleColor = Colors.red;
+        });
+
+        Future.delayed(const Duration(seconds: 2), () {
+          setState(() {
+            circleColor = const Color(0xFFFEC455);
+          });
+        });
+
+        OtpService.keyExpiredNotifier.value = false;
+      }
+    });
+  }
 
   void startCountdown() {
     countdownTimer?.cancel();
@@ -241,14 +269,29 @@ class _HomeScreenState extends State<HomeScreen> {
                 final result =
                     await AccessControllerService.verificarAccesoYGenerarOTP();
 
+                // Siempre detener cualquier temporizador anterior antes de continuar
+                countdownTimer?.cancel();
+
+                setState(() {
+                  isCounting = false;
+                  secondsLeft = totalSeconds;
+                });
+
                 if (result["success"]) {
                   // Si fue exitoso, iniciar el temporizador
                   startCountdown();
+                  setState(() {
+                    isCounting = false;
+                    progress = 0.0; // 👈 Esto es clave
+                    secondsLeft = totalSeconds;
+                    circleColor = Colors.red;
+                  });
                 } else {
                   // Si hubo un error, detener el temporizador si está corriendo
                   countdownTimer?.cancel();
                   setState(() {
                     isCounting = false;
+                    progress = 0.0; // 👈 Esto es clave
                     secondsLeft = totalSeconds;
                     circleColor = Colors.red; // Color rojo para denegado
                   });
