@@ -38,7 +38,7 @@ class OtpService {
       secret,
       DateTime.now().millisecondsSinceEpoch,
       interval: expirationTime,
-      length: 12,
+      length: 10,
       algorithm: Algorithm.SHA1,
       isGoogle: true,
     );
