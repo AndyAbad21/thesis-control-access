@@ -55,7 +55,7 @@ class _SplashScreenState extends State<SplashScreen> {
             child: Padding(
               padding: const EdgeInsets.only(
                 top: 300
-              ),
+              ), // Mostrar valor en consola
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [// ⬅️ Empuja todo 150 píxeles hacia abajo
