@@ -21,8 +21,10 @@ class SecureStorageService {
     await _secureStorage.delete(key: 'secreto_otp');
   }
 
+  // Datos del usuario
   // Guardar valor genérico
   static Future<void> guardarValor(String key, String valor) async {
+    debugPrint('🔐 Almacenado( Alias: $key Valor: $valor )');
     await _secureStorage.write(key: key, value: valor);
   }
 

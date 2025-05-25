@@ -38,10 +38,14 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final jsonResponse = await LoginService.login(email, password);
 
+      debugPrint('JSOONN: $jsonResponse');  // Imprimir la respuesta completa para verificar
+
       if (jsonResponse['status'] == 'success') {
         await SecureStorageService.guardarSecretoOTP(jsonResponse['secreto'] ?? '');
+        await SecureStorageService.guardarValor('usuario_id', jsonResponse['usuario_id'].toString());
         await SecureStorageService.guardarValor('nombres', jsonResponse['nombres'] ?? '');
         await SecureStorageService.guardarValor('apellidos', jsonResponse['apellidos'] ?? '');
+
 
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/home');

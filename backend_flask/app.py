@@ -35,19 +35,20 @@ def login():
 
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
-    cursor.execute('SELECT password_hash, nombres, apellidos, secreto FROM usuarios WHERE email = ?', (email,))
+    cursor.execute('SELECT id, password_hash, nombres, apellidos, secreto FROM usuarios WHERE email = ?', (email,))
     row = cursor.fetchone()
     conn.close()
 
     if row is None:
         return jsonify({'status': 'error', 'message': 'Usuario no encontrado'}), 401
 
-    password_hash, nombres, apellidos, secreto = row
+    usuario_id, password_hash, nombres, apellidos, secreto = row
 
     if check_password_hash(password_hash, password):
         return jsonify({
             'status': 'success',
             'message': 'Login correcto',
+            'usuario_id': usuario_id,
             'nombres': nombres,
             'apellidos': apellidos,
             'secreto': secreto
@@ -55,11 +56,12 @@ def login():
     else:
         return jsonify({'status': 'error', 'message': 'Credenciales inválidas'}), 401
 
+
 # Secreto compartido
-OTP_SECRET = "JBSWY3DPEHPK3PXP"
 OTP_DIGITS = 10
-OTP_ALG = "SHA1"
 OTP_INTERVAL = 15  # ⚠️ Debe coincidir con el que usa Flutter
+# Lista para almacenar eventos temporalmente en memoria
+registros = []
 
 
 @app.route('/validar-llave', methods=['POST'])
@@ -70,9 +72,21 @@ def validar_llave():
 
     print(f"🔑 [VALIDAR] Recibido -> usuario_id: {usuario_id}, llave: {llave}")
 
-    # Generar TOTP en base al mismo secreto y configuración
+    # Obtener el secreto del usuario desde la base de datos
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT secreto FROM usuarios WHERE id = ?', (usuario_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        return jsonify({'estado': 'denegado', 'message': 'Usuario no encontrado'}), 404
+
+    secreto = row[0]  # Secreto almacenado en la base de datos
+
+    # Generar el TOTP usando el secreto obtenido de la base de datos
     totp = pyotp.TOTP(
-        OTP_SECRET,
+        secreto,  # Usar el secreto de la base de datos
         digits=OTP_DIGITS,
         interval=OTP_INTERVAL,
         digest='sha1'
@@ -88,6 +102,7 @@ def validar_llave():
 
     print(f"📣 [VALIDAR] Respuesta -> estado: {estado}")
     return jsonify({"estado": estado})
+
 
 @app.route('/registrar-evento', methods=['POST'])
 def registrar_evento():

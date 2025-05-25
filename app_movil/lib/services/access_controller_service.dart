@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:app_movil/services/secure_storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
@@ -53,14 +54,23 @@ class AccessControllerService {
     String otp = otpResultado["otp"];
     isKeyActive = true;
 
+    // Obtener el usuario_id desde el almacenamiento seguro
+    String? usuarioId = await SecureStorageService.obtenerValor('usuario_id');
+    if (usuarioId == null || usuarioId.isEmpty) {
+      return {
+        "success": false,
+        "message": "❌ No se encontró el usuario ID en el almacenamiento.",
+      };
+    }
+
     // Enviar OTP al backend directamente por Wi-Fi (HTTP POST)
     final response = await http.post(
-      Uri.parse("http://192.168.1.109/recibir-otp"), // Reemplaza con tu IP
+      Uri.parse("http://192.168.1.123/recibir-otp"), // Reemplaza con tu IP
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         // "llave": "123456",
         "llave": otp,
-        "usuario_id": "user_123", // reemplaza con el ID real
+        "usuario_id": usuarioId, // reemplaza con el ID real
       }),
     );
 

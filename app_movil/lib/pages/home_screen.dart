@@ -1,40 +1,40 @@
 import 'package:app_movil/services/otp_service.dart';
-import 'package:app_movil/services/secure_storage_service.dart';
 import 'package:flutter/material.dart';
-import 'dart:async'; // Para controlar el timer
+import 'dart:async';
+
+import '../services/secure_storage_service.dart';
+import '../services/access_controller_service.dart';
 import 'config_screen.dart';
-import '../services/access_controller_service.dart'; // Importa el orquestador
+
+import '../widgets/key_button.dart';
+import '../widgets/user_header.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Variables para nombres y apellidos
   String nombres = '';
   String apellidos = '';
 
   double progress = 1.0;
   Timer? countdownTimer;
   bool isCounting = false;
-  static int totalSeconds =
-      AccessControllerService.time; // Cambia a 300 para 5 minutos reales
+  static int totalSeconds = AccessControllerService.time;
   int secondsLeft = totalSeconds;
   bool _isConfigOpen = false;
   bool isValidating = false;
-  Color circleColor = const Color(0xFFFEC455); // Color por defecto del círculo
+  Color circleColor = const Color(0xFFFEC455);
 
   @override
   void initState() {
     super.initState();
-    _cargarDatosUsuario();
+    _loadUserData();
 
     OtpService.keyExpiredNotifier.addListener(() {
-      debugPrint("📢 Notificador escuchado en HomeScreen");
-
       if (OtpService.keyExpiredNotifier.value) {
         countdownTimer?.cancel();
         setState(() {
@@ -43,26 +43,23 @@ class _HomeScreenState extends State<HomeScreen> {
           secondsLeft = totalSeconds;
           circleColor = Colors.red;
         });
-
         Future.delayed(const Duration(seconds: 2), () {
           setState(() {
             circleColor = const Color(0xFFFEC455);
           });
         });
-
         OtpService.keyExpiredNotifier.value = false;
       }
     });
   }
-  
-  // Método para cargar nombres y apellidos desde SecureStorage
-  Future<void> _cargarDatosUsuario() async {
-    String? n = await SecureStorageService.obtenerValor('nombres');
-    String? a = await SecureStorageService.obtenerValor('apellidos');
+
+  Future<void> _loadUserData() async {
+    final n = await SecureStorageService.obtenerValor('nombres');
+    final a = await SecureStorageService.obtenerValor('apellidos');
 
     setState(() {
-      nombres = n ?? 'Nombre';    // Valor por defecto si es null
-      apellidos = a ?? 'Apellido'; // Valor por defecto si es null
+      nombres = n ?? 'Nombre';
+      apellidos = a ?? 'Apellido';
     });
   }
 
@@ -78,8 +75,6 @@ class _HomeScreenState extends State<HomeScreen> {
     countdownTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       setState(() {
         progress -= 1 / (totalSeconds * 10);
-
-        // Actualiza los segundos faltantes cada 1 segundo exacto
         if (timer.tick % 10 == 0) {
           secondsLeft--;
         }
@@ -90,35 +85,24 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           isCounting = false;
           secondsLeft = totalSeconds;
+          circleColor = Colors.red;
         });
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Center(
               child: Text(
                 'Key expired!',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Colors.white,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
               ),
             ),
             backgroundColor: Colors.red,
             duration: Duration(seconds: 1),
           ),
         );
-
-        // Cambiar el color a rojo cuando expire
-        setState(() {
-          circleColor = Colors.red; // Color rojo
-        });
-
-        // Restaurar el color original después de que el SnackBar desaparezca
         Future.delayed(const Duration(milliseconds: 1500), () {
           setState(() {
-            circleColor = const Color(0xFFFEC455); // Color original
+            circleColor = const Color(0xFFFEC455);
           });
         });
       }
@@ -126,11 +110,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String formatTime(int totalSeconds) {
-    int minutes = totalSeconds ~/ 60;
-    int seconds = totalSeconds % 60;
-    String minutesStr = minutes.toString().padLeft(2, '0');
-    String secondsStr = seconds.toString().padLeft(2, '0');
-    return "$minutesStr:$secondsStr";
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -145,27 +127,24 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
+          // Fondo azul con rotación
           Positioned(
             top: -100,
             left: -250,
             child: Transform.rotate(
               angle: 0.785398,
-              child: Container(
-                width: 508,
-                height: 340,
-                color: const Color(0xFF013B72),
-              ),
+              child: Container(width: 508, height: 340, color: const Color(0xFF013B72)),
             ),
           ),
+
+          // Botón menú configuración
           Positioned(
             top: 30,
             left: 10,
             child: IconButton(
               icon: const Icon(Icons.menu, color: Colors.white, size: 40),
               onPressed: () {
-                setState(() {
-                  _isConfigOpen = true;
-                });
+                setState(() => _isConfigOpen = true);
 
                 showGeneralDialog(
                   context: context,
@@ -173,58 +152,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   barrierColor: Colors.transparent,
                   barrierLabel: 'ConfigScreen',
                   transitionDuration: const Duration(milliseconds: 500),
-                  pageBuilder: (context, animation, secondaryAnimation) {
-                    return const ConfigScreen();
-                  },
-                  transitionBuilder: (
-                    context,
-                    animation,
-                    secondaryAnimation,
-                    child,
-                  ) {
-                    final tween = Tween(
-                      begin: const Offset(-1, 0),
-                      end: Offset.zero,
-                    );
+                  pageBuilder: (_, __, ___) => const ConfigScreen(),
+                  transitionBuilder: (_, animation, __, child) {
+                    final tween = Tween(begin: const Offset(-1, 0), end: Offset.zero);
                     return SlideTransition(
-                      position: tween.animate(
-                        CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeInOut,
-                        ),
-                      ),
+                      position: tween.animate(CurvedAnimation(parent: animation, curve: Curves.easeInOut)),
                       child: child,
                     );
                   },
-                ).then((_) {
-                  setState(() {
-                    _isConfigOpen = false;
-                  });
-                });
+                ).then((_) => setState(() => _isConfigOpen = false));
               },
             ),
           ),
-          Positioned(
-            top: 125,
-            left: 35,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  nombres,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 25,
-                  ),
-                ),
-                Text(
-                  apellidos,
-                  style: TextStyle(color: Colors.white, fontSize: 25),
-                ),
-              ],
-            ),
-          ),
+
+          // Nombres y apellidos
+          Positioned(top: 125, left: 35, child: UserHeader(nombres: nombres, apellidos: apellidos)),
+
+          // Logo UPS en opacidad
           Positioned(
             top: 200,
             right: -60,
@@ -234,6 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Image.asset('assets/logo_ups_unico.png', width: 250),
             ),
           ),
+
+          // Texto central con tiempo o estado
           Align(
             alignment: const Alignment(0, 0.12),
             child: Column(
@@ -241,52 +187,39 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   isCounting ? 'Expire in:' : 'Generate key',
-                  style: TextStyle(
-                    color: Color.fromARGB(157, 1, 59, 114),
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(color: Color.fromARGB(157, 1, 59, 114), fontSize: 28, fontWeight: FontWeight.bold),
                 ),
                 if (isCounting)
                   Padding(
                     padding: const EdgeInsets.only(top: 0),
-                    child: Text(
-                      formatTime(secondsLeft),
-                      style: const TextStyle(
-                        color: Color(0xFF013B72),
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text(formatTime(secondsLeft),
+                        style: const TextStyle(color: Color(0xFF013B72), fontSize: 32, fontWeight: FontWeight.bold)),
                   ),
                 if (isValidating)
                   const Padding(
                     padding: EdgeInsets.only(top: 0),
-                    child: Text(
-                      'Validando...',
-                      style: TextStyle(
-                        color: Color(0xFF013B72),
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text('Validando...',
+                        style: TextStyle(color: Color(0xFF013B72), fontSize: 25, fontWeight: FontWeight.bold)),
                   ),
               ],
             ),
           ),
+
+          // Botón circular para generar/verificar OTP
           Align(
             alignment: const Alignment(0, 0.66),
-            child: GestureDetector(
+            child: KeyButton(
+              progress: progress,
+              isCounting: isCounting,
+              circleColor: circleColor,
               onTap: () async {
                 setState(() {
-                  isValidating = true; // Mostrar mensaje "Validando..."
+                  isValidating = true;
                   circleColor = Colors.green;
                 });
-                // Llamamos a la función para verificar el acceso y generar la OTP
-                final result =
-                    await AccessControllerService.verificarAccesoYGenerarOTP();
 
-                // Siempre detener cualquier temporizador anterior antes de continuar
+                final result = await AccessControllerService.verificarAccesoYGenerarOTP();
+
                 countdownTimer?.cancel();
 
                 setState(() {
@@ -295,138 +228,43 @@ class _HomeScreenState extends State<HomeScreen> {
                 });
 
                 if (result["success"]) {
-                  // Si fue exitoso, iniciar el temporizador
                   startCountdown();
                   setState(() {
-                    isCounting = false;
-                    progress = 0.0; // 👈 Esto es clave
+                    progress = 0.0;
                     secondsLeft = totalSeconds;
                     circleColor = Colors.red;
                   });
                 } else {
-                  // Si hubo un error, detener el temporizador si está corriendo
-                  countdownTimer?.cancel();
                   setState(() {
                     isCounting = false;
-                    progress = 0.0; // 👈 Esto es clave
+                    progress = 0.0;
                     secondsLeft = totalSeconds;
-                    circleColor = Colors.red; // Color rojo para denegado
+                    circleColor = Colors.red;
                   });
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                        result["message"] ?? "❌ OTP rechazada",
-                        textAlign: TextAlign.center,
-                      ),
+                      content: Text(result["message"] ?? "❌ OTP rechazada", textAlign: TextAlign.center),
                       backgroundColor: Colors.red,
                       duration: const Duration(seconds: 2),
                     ),
                   );
 
-                  // Restaurar color original después de mostrar el mensaje
                   Future.delayed(const Duration(seconds: 3), () {
                     setState(() {
-                      circleColor = const Color(
-                        0xFFFEC455,
-                      ); // Color original del botón
+                      circleColor = const Color(0xFFFEC455);
                     });
                   });
                 }
                 setState(() {
-                  isValidating =
-                      false; // Ocultar mensaje "Validando..." cuando termine
+                  isValidating = false;
                   circleColor = const Color(0xFFFEC455);
                 });
               },
-              child: CustomPaint(
-                painter: KeyButtonPainter(progress, isCounting, circleColor),
-                child: Container(
-                  width: 175,
-                  height: 175,
-                  alignment: Alignment.center,
-                  child: Image.asset('assets/key.png', width: 150),
-                ),
-              ),
             ),
           ),
         ],
       ),
     );
-  }
-}
-
-class KeyButtonPainter extends CustomPainter {
-  final double progress;
-  final bool isCounting;
-  final Color circleColor; // Agregamos el color como parámetro
-
-  KeyButtonPainter(this.progress, this.isCounting, this.circleColor);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    double radius = size.width / 2;
-
-    Paint outerCircle =
-        Paint()
-          ..color = const Color(0xFF013B72)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 70;
-
-    canvas.drawCircle(Offset(radius, radius), radius - 1, outerCircle);
-
-    if (!isCounting) {
-      Paint fullWhite =
-          Paint()
-            ..color =
-                circleColor // Usamos el color que se pasa como parámetro
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 70;
-
-      canvas.drawCircle(Offset(radius, radius), radius - 20, fullWhite);
-    } else {
-      Paint passedArc =
-          Paint()
-            ..color = Colors.white
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 70;
-
-      canvas.drawArc(
-        Rect.fromCircle(center: Offset(radius, radius), radius: radius - 20),
-        -90 * 0.0174533,
-        -360 * (1 - progress) * 0.0174533,
-        false,
-        passedArc,
-      );
-
-      Paint remainingArc =
-          Paint()
-            ..color =
-                circleColor // Usamos el color que se pasa como parámetro
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 70;
-
-      canvas.drawArc(
-        Rect.fromCircle(center: Offset(radius, radius), radius: radius - 20),
-        (-90 + 360 * progress) * 0.0174533,
-        -360 * progress * 0.0174533,
-        false,
-        remainingArc,
-      );
-    }
-
-    Paint innerCircle =
-        Paint()
-          ..color = const Color(0xFF013B72)
-          ..style = PaintingStyle.fill;
-
-    canvas.drawCircle(Offset(radius, radius), radius, innerCircle);
-  }
-
-  @override
-  bool shouldRepaint(covariant KeyButtonPainter oldDelegate) {
-    return oldDelegate.progress != progress ||
-        oldDelegate.isCounting != isCounting ||
-        oldDelegate.circleColor != circleColor;
   }
 }
