@@ -1,3 +1,4 @@
+import 'package:app_movil/services/secure_storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -21,6 +22,18 @@ class _ConfigScreenState extends State<ConfigScreen> {
         statusBarIconBrightness:
             Brightness.light, // Íconos de la barra en color blanco
       ),
+    );
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    // Eliminar todos los datos almacenados en SecureStorage
+    await SecureStorageService.limpiarTodo();
+
+    // Navegar a login y eliminar todo el historial de navegación
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/login',
+      (Route<dynamic> route) => false,
     );
   }
 
@@ -141,14 +154,10 @@ class _ConfigScreenState extends State<ConfigScreen> {
 
                           // Logout
                           GestureDetector(
-                            onTap: () {
-                              Navigator.pushReplacementNamed(context, '/login');
-                            },
+                            onTap: () => _logout(context),
                             // Cierra el panel
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start, // Alinear a la izquierda
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: const [
@@ -172,9 +181,8 @@ class _ConfigScreenState extends State<ConfigScreen> {
                                   height: 8,
                                 ), // Espacio pequeño entre texto y línea
                                 Container(
-                                  height: 2.5, // Grosor de la línea
-                                  width:
-                                      110, // 🔥 Ancho limitado, no todo el ancho
+                                  height: 2.5,
+                                  width: 110,
                                   color: Colors.white,
                                 ),
                               ],
@@ -195,7 +203,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
               flex: 1,
               child: GestureDetector(
                 onTap: () {
-                  Navigator.pop(context); // 🔥 Animación inversa suave
+                  Navigator.pop(context); // Animación inversa suave
                 },
                 child: Container(color: Colors.transparent),
               ),

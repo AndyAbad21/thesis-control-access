@@ -7,7 +7,7 @@ class SecureStorageService {
 
   // Guardar el secreto OTP de forma segura
   static Future<void> guardarSecretoOTP(String secreto) async {
-    debugPrint('🔐 Guardando secreto OTP: $secreto'); // Mostrar valor en consola
+    debugPrint('🔐 Guardando secreto OTP: $secreto');
     await _secureStorage.write(key: 'secreto_otp', value: secreto);
   }
 
@@ -34,5 +34,10 @@ class SecureStorageService {
   // Eliminar valor genérico
   static Future<void> eliminarValor(String key) async {
     await _secureStorage.delete(key: key);
+  }
+
+  static Future<void> limpiarTodo() async {
+    debugPrint('❌ Se eliminaron Nombres, Apellidos y el secreto del usuario');
+    await _secureStorage.deleteAll();
   }
 }
