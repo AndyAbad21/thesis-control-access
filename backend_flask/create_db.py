@@ -29,9 +29,6 @@ def insertar_usuario(email, password, nombres=None, apellidos=None):
     # Generar un secreto único para el usuario
     secreto = pyotp.random_base32()
 
-    if secreto is None:
-        secreto = 'JBSWY3DPEHPK3PXP'  # Puedes cambiar este valor por defecto
-
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
 

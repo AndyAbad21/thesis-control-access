@@ -1,11 +1,11 @@
 import 'dart:convert';
-import 'package:app_movil/services/secure_storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'auth_service.dart';
 import 'location_service.dart';
 import 'otp_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';  // Importar para Secure Storage
 
 class AccessControllerService {
   static bool isKeyActive = false;
@@ -13,6 +13,14 @@ class AccessControllerService {
   static const int _time = 15;
 
   static int get time => _time;
+
+  // Crear instancia del almacenamiento seguro
+  static final FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+
+  // Función para recuperar el usuario_id desde el almacenamiento seguro
+  static Future<String?> obtenerUsuarioId() async {
+    return await _secureStorage.read(key: 'usuario_id');
+  }
 
   static Future<Map<String, dynamic>> verificarAccesoYGenerarOTP() async {
     if (isKeyActive) {
@@ -22,11 +30,13 @@ class AccessControllerService {
       };
     }
 
+    // Autenticación del usuario
     bool autenticado = await AuthService.authenticate();
     if (!autenticado) {
       return {"success": false, "message": "❌ Autenticación fallida."};
     }
 
+    // Obtener la ubicación del usuario
     Position? position = await LocationService.getCurrentLocation();
     if (position == null) {
       return {
@@ -35,6 +45,7 @@ class AccessControllerService {
       };
     }
 
+    // Calcular la distancia mínima
     final resultado = LocationService.calcularDistanciaMinima(position);
     double distanciaMinima = resultado['distancia'];
     if (distanciaMinima > _maxAllowed) {
@@ -45,9 +56,10 @@ class AccessControllerService {
       };
     }
 
+    // Generar OTP
     var otpResultado = await OtpService.generateOTP(_time);
     if (!otpResultado["success"]) {
-      isKeyActive = false; // Desbloquear la creacion de una nueva llave
+      isKeyActive = false; // Desbloquear la creación de una nueva llave
       return {"success": false, "message": otpResultado["message"]};
     }
 
@@ -55,7 +67,7 @@ class AccessControllerService {
     isKeyActive = true;
 
     // Obtener el usuario_id desde el almacenamiento seguro
-    String? usuarioId = await SecureStorageService.obtenerValor('usuario_id');
+    String? usuarioId = await obtenerUsuarioId();
     if (usuarioId == null || usuarioId.isEmpty) {
       return {
         "success": false,
@@ -68,9 +80,8 @@ class AccessControllerService {
       Uri.parse("http://192.168.1.123/recibir-otp"), // Reemplaza con tu IP
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        // "llave": "123456",
         "llave": otp,
-        "usuario_id": usuarioId, // reemplaza con el ID real
+        "usuario_id": usuarioId,  // Usar el usuario_id recuperado del storage
       }),
     );
 
@@ -80,11 +91,9 @@ class AccessControllerService {
 
     if (!autorizado) {
       isKeyActive = false; // Marcar la llave como inactiva si fue rechazada
-      // Nueva línea:
       OtpService.notifyExpiration();
     } else {
-      // ✅ Para autorizados, también forzamos detención del contador
-      OtpService.notifyExpiration(); // 🔥 Detener timer visual cuando ESP32 responde
+      OtpService.notifyExpiration(); // Detener timer visual cuando ESP32 responde
     }
 
     return {
