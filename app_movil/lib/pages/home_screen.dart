@@ -1,4 +1,5 @@
 import 'package:app_movil/services/otp_service.dart';
+import 'package:app_movil/services/secure_storage_service.dart';
 import 'package:flutter/material.dart';
 import 'dart:async'; // Para controlar el timer
 import 'config_screen.dart';
@@ -12,6 +13,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  // Variables para nombres y apellidos
+  String nombres = '';
+  String apellidos = '';
+
   double progress = 1.0;
   Timer? countdownTimer;
   bool isCounting = false;
@@ -25,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _cargarDatosUsuario();
 
     OtpService.keyExpiredNotifier.addListener(() {
       debugPrint("📢 Notificador escuchado en HomeScreen");
@@ -46,6 +52,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
         OtpService.keyExpiredNotifier.value = false;
       }
+    });
+  }
+  
+  // Método para cargar nombres y apellidos desde SecureStorage
+  Future<void> _cargarDatosUsuario() async {
+    String? n = await SecureStorageService.obtenerValor('nombres');
+    String? a = await SecureStorageService.obtenerValor('apellidos');
+
+    setState(() {
+      nombres = n ?? 'Nombre';    // Valor por defecto si es null
+      apellidos = a ?? 'Apellido'; // Valor por defecto si es null
     });
   }
 
@@ -192,9 +209,9 @@ class _HomeScreenState extends State<HomeScreen> {
             left: 35,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
-              children: const [
+              children: [
                 Text(
-                  'Andy Fabricio',
+                  nombres,
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -202,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 Text(
-                  'Abad Freire',
+                  apellidos,
                   style: TextStyle(color: Colors.white, fontSize: 25),
                 ),
               ],

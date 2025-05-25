@@ -36,6 +36,9 @@ dependencies:
   flutter_secure_storage: ^9.2.4 # Libreria para almacenar la keysecret
   permission_handler: ^12.0.0+1  # Asegúrate de usar la última versión
   http: ^1.4.0  # Ultima version del protocolo http
+  sqflite: ^2.2.0+3
+  path_provider: ^2.0.13
+  path: ^1.8.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

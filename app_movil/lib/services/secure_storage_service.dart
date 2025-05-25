@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorageService {
@@ -6,6 +7,7 @@ class SecureStorageService {
 
   // Guardar el secreto OTP de forma segura
   static Future<void> guardarSecretoOTP(String secreto) async {
+    debugPrint('🔐 Guardando secreto OTP: $secreto'); // Mostrar valor en consola
     await _secureStorage.write(key: 'secreto_otp', value: secreto);
   }
 
@@ -17,5 +19,20 @@ class SecureStorageService {
   // Eliminar el secreto OTP (por si deseas cerrar sesión o limpiar datos)
   static Future<void> eliminarSecretoOTP() async {
     await _secureStorage.delete(key: 'secreto_otp');
+  }
+
+  // Guardar valor genérico
+  static Future<void> guardarValor(String key, String valor) async {
+    await _secureStorage.write(key: key, value: valor);
+  }
+
+  // Obtener valor genérico
+  static Future<String?> obtenerValor(String key) async {
+    return await _secureStorage.read(key: key);
+  }
+
+  // Eliminar valor genérico
+  static Future<void> eliminarValor(String key) async {
+    await _secureStorage.delete(key: key);
   }
 }

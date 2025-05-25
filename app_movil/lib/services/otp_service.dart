@@ -24,9 +24,6 @@ class OtpService {
     _timeLeft = expirationTime;
     timeNotifier.value = _timeLeft;
 
-    // Guardar el secreto en almacenamiento seguro
-    await SecureStorageService.guardarSecretoOTP('JBSWY3DPEHPK3PXP');
-
     // Obtener el secreto desde el almacenamiento seguro
     String? secret = await SecureStorageService.obtenerSecretoOTP();
 

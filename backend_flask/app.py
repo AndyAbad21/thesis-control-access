@@ -2,8 +2,58 @@ from flask import Flask, request, jsonify
 import pyotp
 from datetime import datetime
 import time
+import sqlite3
+from werkzeug.security import check_password_hash
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)  # Para permitir llamadas desde Flutter (front-end)
+
+DB_FILE = 'acceso_seguro.db'
+
+def validar_usuario(email, password):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT password_hash FROM usuarios WHERE email = ?', (email,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        return False
+
+    password_hash = row[0]
+    return check_password_hash(password_hash, password)
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+
+    if not email or not password:
+        return jsonify({'status': 'error', 'message': 'Faltan datos'}), 400
+
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT password_hash, nombres, apellidos, secreto FROM usuarios WHERE email = ?', (email,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if row is None:
+        return jsonify({'status': 'error', 'message': 'Usuario no encontrado'}), 401
+
+    password_hash, nombres, apellidos, secreto = row
+
+    if check_password_hash(password_hash, password):
+        return jsonify({
+            'status': 'success',
+            'message': 'Login correcto',
+            'nombres': nombres,
+            'apellidos': apellidos,
+            'secreto': secreto
+        })
+    else:
+        return jsonify({'status': 'error', 'message': 'Credenciales inválidas'}), 401
 
 # Secreto compartido
 OTP_SECRET = "JBSWY3DPEHPK3PXP"
@@ -11,7 +61,6 @@ OTP_DIGITS = 10
 OTP_ALG = "SHA1"
 OTP_INTERVAL = 15  # ⚠️ Debe coincidir con el que usa Flutter
 
-registros = []
 
 @app.route('/validar-llave', methods=['POST'])
 def validar_llave():
