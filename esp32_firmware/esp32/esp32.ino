@@ -51,9 +51,7 @@ void registrarEvento(String usuario_id, String estado) {
 
   http.addHeader("Content-Type", "application/json");
 
-  String fecha = "2025-05-24T00:00:00Z";  // Puedes reemplazar con fecha dinámica
-
-  String jsonPayload = "{\"usuario_id\": \"" + usuario_id + "\", \"fecha\": \"" + fecha + "\", \"estado\": \"" + estado + "\"}";
+  String jsonPayload = "{\"usuario_id\": \"" + usuario_id + "\", \"estado\": \"" + estado + "\"}";
   int httpResponseCode = http.POST(jsonPayload);
 
   if (httpResponseCode > 0) {
