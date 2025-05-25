@@ -29,16 +29,24 @@ def login():
         print(
             f"📤 Login-Fail [Flask-->Flutter] El 📧 Email: {email} no esta asociado a ningun usuario de la UPS"
         )
+        # Logs de correo no asociadao a ningun usuario
+        log_event(
+            "WARNING",
+            "Correo no asociado a ningun usuario de la UPS",
+            {
+                "email": email,
+                "ipAddress": request.remote_addr,
+            },
+        )
         return jsonify({"status": "error", "message": "Usuario no encontrado"}), 401
 
     usuario_id, password_hash, nombres, apellidos, secreto = user
 
-    print(
-        f"🔐 Login [Autenticacion] Datos del usuario -> ( 👤 Email: {email}, 🔑 Contraseña: {password} )"
-    )
-
     if validar_usuario(email, password):
         # Logs de login exitoso
+        print(
+            f"🔐 Login [OK] Datos del usuario -> ( 👤 Email: {email}, 🔑 Contraseña: {password} )✅"
+        )
         log_event(
             "INFO",
             "Login exitoso",
@@ -73,11 +81,30 @@ def validar_llave_route():
     usuario_id = data.get("usuario_id")
 
     print(f"🔑 [Esp32-->Flask] Recibido -> usuario_id: {usuario_id}, llave: {llave}")
+    log_event(
+        "DEBUG",
+        "Usuario y llave recibida del ESP32",
+        {
+            "userId": usuario_id,
+            "llaveOTP": llave,
+            "ipAddress": request.remote_addr,
+        },
+    )
 
     # Validar la OTP
     resultado = validar_llave(usuario_id, llave)
 
-    print(f"📣 [Flask] Respuesta -> estado: {resultado['estado']}")
+    print(f"📣 [Flask] Validacion -> estado: {resultado['estado']}")
+    log_event(
+        "DEBUG",
+        "Respuesta de validacion enviada al ESP32",
+        {
+            "userId": usuario_id,
+            "llaveOTP": llave,
+            "estado": resultado['estado'],
+            "ipAddress": request.remote_addr,
+        },
+    )
     return jsonify({"estado": resultado["estado"]})
 
 
@@ -93,6 +120,16 @@ def registrar_evento():
     # Para efectos de demostración solo agregamos en memoria
     registros.append(evento)
     print(f"📝 [REGISTRO] Evento registrado -> {evento}")
+    log_event(
+        "INFO",
+        "Evento registrado",
+        {
+            "userId": evento['usuario_id'],
+            "fecha": evento['fecha'],
+            "estado": evento['estado'],
+            "ipAddress": request.remote_addr,
+        },
+    )
     return jsonify({"Flask": "evento registrado"})
 
 
@@ -111,4 +148,17 @@ def log_event(level, message, context=None):
         "message": message,
         "context": context or {},
     }
-    print(json.dumps(log))
+    json_log = json.dumps(log)
+
+    # Imprimir en consola (opcional)
+    # print(json_log)
+
+    # Guardar en archivo según nivel
+    if level == "INFO":
+        logging.info(json_log)
+    elif level == "WARNING":
+        logging.warning(json_log)
+    elif level == "ERROR":
+        logging.error(json_log)
+    elif level == "DEBUG":
+        logging.debug(json_log)
